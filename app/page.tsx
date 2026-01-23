@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trash2, Loader2 } from "lucide-react";
 import axios from 'axios';
+import SearchBar from '@/components/SearchBar';
 
 export default function Dashboard() {
   const queryClient = useQueryClient();
@@ -123,17 +124,27 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      
+
       {/* Header */}
       <header className="bg-white/70 backdrop-blur-lg border-b border-slate-200/50 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex items-center justify-between gap-4">
+            <div className="shrink-0">
               <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                 Resume Processor
               </h1>
               <p className="text-sm text-slate-500 mt-0.5">AI-powered candidate management</p>
             </div>
-            <div className="flex items-center gap-4">
+
+            {/* Global Search */}
+            <SignedIn>
+              <div className="flex-1 max-w-md mx-4">
+                <SearchBar />
+              </div>
+            </SignedIn>
+
+            <div className="flex items-center gap-4 shrink-0">
               <SignedIn>
                 <ExportButton candidates={filteredCandidates} />
                 <UserButton />
@@ -215,116 +226,116 @@ export default function Dashboard() {
                   <p className="text-sm text-slate-400 mt-1">Upload resumes to get started</p>
                 </div>
               ) : (
-                 <div className="grid gap-4">
-                <AnimatePresence>
-                  {/* Bulk Action Bar */}
-                  {selectedIds.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      className="sticky top-20 z-40 bg-white border border-blue-200 shadow-xl rounded-xl p-4 mb-4 flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-4">
-                        <span className="font-semibold text-slate-800">{selectedIds.length} Selected</span>
-                        <Button variant="ghost" size="sm" onClick={() => setSelectedIds([])}>Deselect All</Button>
+                <div className="grid gap-4">
+                  <AnimatePresence>
+                    {/* Bulk Action Bar */}
+                    {selectedIds.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className="sticky top-20 z-40 bg-white border border-blue-200 shadow-xl rounded-xl p-4 mb-4 flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-4">
+                          <span className="font-semibold text-slate-800">{selectedIds.length} Selected</span>
+                          <Button variant="ghost" size="sm" onClick={() => setSelectedIds([])}>Deselect All</Button>
 
-                        <Button variant="ghost" size="sm" onClick={() => setSelectedIds(filteredCandidates.map((c: any) => c._id || c.id))}>Select All</Button>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {/* Bulk Status */}
-                        <Select onValueChange={(v) => handleBulkUpdate({ status: v })}>
-                          <SelectTrigger className="w-[140px] h-9">
-                            <SelectValue placeholder="Set Status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="new">New</SelectItem>
-                            <SelectItem value="reviewing">Reviewing</SelectItem>
-                            <SelectItem value="interview">Interview</SelectItem>
-                            <SelectItem value="rejected">Rejected</SelectItem>
-                          </SelectContent>
-                        </Select>
+                          <Button variant="ghost" size="sm" onClick={() => setSelectedIds(filteredCandidates.map((c: any) => c._id || c.id))}>Select All</Button>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {/* Bulk Status */}
+                          <Select onValueChange={(v) => handleBulkUpdate({ status: v })}>
+                            <SelectTrigger className="w-[140px] h-9">
+                              <SelectValue placeholder="Set Status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="new">New</SelectItem>
+                              <SelectItem value="reviewing">Reviewing</SelectItem>
+                              <SelectItem value="interview">Interview</SelectItem>
+                              <SelectItem value="rejected">Rejected</SelectItem>
+                            </SelectContent>
+                          </Select>
 
-                        {/* Bulk Priority */}
-                        <Select onValueChange={(v) => handleBulkUpdate({ priority: v })}>
-                          <SelectTrigger className="w-[140px] h-9">
-                            <SelectValue placeholder="Set Priority" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="high">High</SelectItem>
-                            <SelectItem value="medium">Medium</SelectItem>
-                            <SelectItem value="low">Low</SelectItem>
-                          </SelectContent>
-                        </Select>
+                          {/* Bulk Priority */}
+                          <Select onValueChange={(v) => handleBulkUpdate({ priority: v })}>
+                            <SelectTrigger className="w-[140px] h-9">
+                              <SelectValue placeholder="Set Priority" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="high">High</SelectItem>
+                              <SelectItem value="medium">Medium</SelectItem>
+                              <SelectItem value="low">Low</SelectItem>
+                            </SelectContent>
+                          </Select>
 
-                        <div className="h-6 w-px bg-slate-200 mx-2" />
+                          <div className="h-6 w-px bg-slate-200 mx-2" />
 
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={handleBulkDelete}
-                          disabled={bulkActionLoading}
-                        >
-                          {bulkActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
-                          Delete Selected
-                        </Button>
-                      </div>
-                    </motion.div>
-                  )}
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={handleBulkDelete}
+                            disabled={bulkActionLoading}
+                          >
+                            {bulkActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                            Delete Selected
+                          </Button>
+                        </div>
+                      </motion.div>
+                    )}
 
-                  {filteredCandidates.map((candidate: any) => (
-                    <div key={candidate._id || candidate.id} className="flex gap-3">
-                      <div className="pt-4">
-                        <input
-                          type="checkbox"
-                          className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                          checked={selectedIds.includes(candidate._id || candidate.id)}
-                          onChange={(e) => {
-                            const id = candidate._id || candidate.id;
-                            if (e.target.checked) setSelectedIds([...selectedIds, id]);
-                            else setSelectedIds(selectedIds.filter(i => i !== id));
-                          }}
+                    {filteredCandidates.map((candidate: any) => (
+                      <div key={candidate._id || candidate.id} className="flex gap-3">
+                        <div className="pt-4">
+                          <input
+                            type="checkbox"
+                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                            checked={selectedIds.includes(candidate._id || candidate.id)}
+                            onChange={(e) => {
+                              const id = candidate._id || candidate.id;
+                              if (e.target.checked) setSelectedIds([...selectedIds, id]);
+                              else setSelectedIds(selectedIds.filter(i => i !== id));
+                            }}
+                          />
+                        </div>
+                        <CandidateCard
+                          candidate={candidate}
+                          onUpdate={refreshData}
                         />
                       </div>
-                      <CandidateCard
-                        candidate={candidate}
-                        onUpdate={refreshData}
-                      />
-                    </div>
-                  ))}
-                </AnimatePresence>
+                    ))}
+                  </AnimatePresence>
                 </div>
               )}
-          </TabsContent>
+            </TabsContent>
 
-          <TabsContent value="upload">
-            <div className="max-w-2xl mx-auto">
-              <ResumeUploader jobs={jobs} onSuccess={refreshData} />
-            </div>
-          </TabsContent>
+            <TabsContent value="upload">
+              <div className="max-w-2xl mx-auto">
+                <ResumeUploader jobs={jobs} onSuccess={refreshData} />
+              </div>
+            </TabsContent>
 
-          <TabsContent value="jobs">
-            <div className="max-w-2xl mx-auto">
-              <JobManager jobs={jobs} onUpdate={refreshData} />
-            </div>
-          </TabsContent>
-        </Tabs>
-      </SignedIn>
+            <TabsContent value="jobs">
+              <div className="max-w-2xl mx-auto">
+                <JobManager jobs={jobs} onUpdate={refreshData} />
+              </div>
+            </TabsContent>
+          </Tabs>
+        </SignedIn>
 
-      <SignedOut>
-        <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
-          <h2 className="text-3xl font-bold text-slate-800 mb-4">Welcome to Resume Processor</h2>
-          <p className="text-lg text-slate-600 mb-8 max-w-lg">
-            AI-powered candidate management and resume parsing.
-          </p>
-          <SignInButton mode="modal">
-            <Button size="lg" className="text-lg px-8 py-6">
-              Get Started
-            </Button>
-          </SignInButton>
-        </div>
-      </SignedOut>
-    </main>
+        <SignedOut>
+          <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
+            <h2 className="text-3xl font-bold text-slate-800 mb-4">Welcome to Resume Processor</h2>
+            <p className="text-lg text-slate-600 mb-8 max-w-lg">
+              AI-powered candidate management and resume parsing.
+            </p>
+            <SignInButton mode="modal">
+              <Button size="lg" className="text-lg px-8 py-6">
+                Get Started
+              </Button>
+            </SignInButton>
+          </div>
+        </SignedOut>
+      </main>
     </div >
   );
 }

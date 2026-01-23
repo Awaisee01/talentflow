@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/lib/api-client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, Upload, Briefcase, BarChart3, LogIn } from "lucide-react";
+import { Users, Upload, Briefcase, BarChart3, LogIn, CheckCircle2, XCircle } from "lucide-react";
 import ResumeUploader from '@/components/ResumeUploader';
 import CandidateCard from '@/components/CandidateCard';
 import CandidateFilters from '@/components/CandidateFilters';
@@ -118,13 +118,13 @@ export default function Dashboard() {
   const stats = useMemo(() => ({
     total: candidates.length,
     new: candidates.filter((c: any) => c.status === 'new').length,
-    interviewing: candidates.filter((c: any) => c.status === 'interview').length,
-    highPriority: candidates.filter((c: any) => c.priority === 'high').length
+    verified: candidates.filter((c: any) => c.skills?.some((s: any) => typeof s !== 'string' && s.status === 'verified')).length,
+    rejected: candidates.filter((c: any) => c.status === 'rejected').length
   }), [candidates]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      
+
 
       {/* Header */}
       <header className="bg-white/70 backdrop-blur-lg border-b border-slate-200/50 sticky top-0 z-50">
@@ -168,9 +168,9 @@ export default function Dashboard() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             {[
               { label: 'Total Candidates', value: stats.total, icon: Users, color: 'blue' },
-              { label: 'New', value: stats.new, icon: Upload, color: 'green' },
-              { label: 'In Interview', value: stats.interviewing, icon: BarChart3, color: 'orange' },
-              { label: 'High Priority', value: stats.highPriority, icon: Briefcase, color: 'red' }
+              { label: 'New Results', value: stats.new, icon: Upload, color: 'green' },
+              { label: 'Verified Skills', value: stats.verified, icon: CheckCircle2, color: 'indigo' },
+              { label: 'Rejected', value: stats.rejected, icon: XCircle, color: 'red' }
             ].map((stat, i) => (
               <motion.div
                 key={stat.label}

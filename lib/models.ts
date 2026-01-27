@@ -60,6 +60,7 @@ export interface ICandidate {
     // Resume & Analysis
     resume_text?: string;
     analysis?: any; // JSON object from AI
+    notes?: string;
 
     created_date: Date;
     updated_date: Date;
@@ -111,6 +112,7 @@ const CandidateSchema = new Schema<ICandidate>({
 
     resume_text: { type: String },
     analysis: { type: Schema.Types.Mixed },
+    notes: { type: String },
 
     created_date: { type: Date, default: Date.now, index: true },
     updated_date: { type: Date, default: Date.now },

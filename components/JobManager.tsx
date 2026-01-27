@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Briefcase, Plus, X, Trash2, Loader2 } from "lucide-react";
+import { Briefcase, Plus, X, Trash2, Loader2, Copy } from "lucide-react";
 import { base44 } from "@/lib/api-client";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -159,14 +159,29 @@ export default function JobManager({ jobs, onUpdate }: JobManagerProps) {
                                                 </div>
                                             )}
                                         </div>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => deleteJob(job._id || job.id)}
-                                            className="text-slate-400 hover:text-red-500"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </Button>
+                                        <div className="flex gap-1">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => {
+                                                    const url = `${window.location.origin}/apply?job=${encodeURIComponent(job.title)}`;
+                                                    navigator.clipboard.writeText(url);
+                                                    alert('Apply link copied to clipboard!');
+                                                }}
+                                                className="text-slate-400 hover:text-blue-600 h-8 px-2"
+                                            >
+                                                <Copy className="w-4 h-4 mr-1" />
+                                                Copy Link
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => deleteJob(job._id || job.id)}
+                                                className="text-slate-400 hover:text-red-500 h-8 w-8"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                        </div>
                                     </div>
                                 </motion.div>
                             ))}

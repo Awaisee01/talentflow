@@ -4,9 +4,11 @@ import { Download, Loader2 } from "lucide-react";
 
 interface ExportButtonProps {
     candidates: any[];
+    label?: string;
+    variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
 }
 
-export default function ExportButton({ candidates }: ExportButtonProps) {
+export default function ExportButton({ candidates, label, variant = "outline" }: ExportButtonProps) {
     const [exporting, setExporting] = useState(false);
 
     const exportToCSV = () => {
@@ -68,15 +70,18 @@ export default function ExportButton({ candidates }: ExportButtonProps) {
         <Button
             onClick={exportToCSV}
             disabled={exporting || candidates.length === 0}
-            variant="outline"
-            className="border-slate-200"
+            variant={variant}
+            size="sm"
+            className={variant === "outline" ? "border-slate-200" : ""}
         >
             {exporting ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-                <Download className="w-4 h-4 mr-2" />
+                <Download className="w-4 h-4 mr-0 sm:mr-2" />
             )}
-            Export CSV ({candidates.length})
+            <span className="hidden sm:inline">
+                {label || `Export (${candidates.length})`}
+            </span>
         </Button>
     );
 }

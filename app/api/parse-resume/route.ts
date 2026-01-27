@@ -119,6 +119,41 @@ export async function POST(req: NextRequest) {
                             skills = String(row[skillsKey]).split(/[,;]/).map((s: string) => ({ name: s.trim(), status: 'unverified' })).filter((s: any) => s.name);
                         }
 
+                        // Detect Score
+                        let score = undefined;
+                        const scoreKey = keys.find(k => /score|rating|ציון|דירוג/.test(k.toLowerCase()));
+                        if (scoreKey) {
+                            score = Number(row[scoreKey]);
+                        }
+
+                        // Detect Priority
+                        let priority = 'medium';
+                        const priorityKey = keys.find(k => /priority|עדיפות/.test(k.toLowerCase()));
+                        if (priorityKey) {
+                            const p = String(row[priorityKey]).toLowerCase();
+                            if (p.includes('high') || p.includes('גבוה')) priority = 'high';
+                            else if (p.includes('low') || p.includes('נמוך')) priority = 'low';
+                        }
+
+                        // Detect Status
+                        let status = 'new';
+                        const statusKey = keys.find(k => /status|state|סטטוס|מצב|שלב/.test(k.toLowerCase()));
+                        if (statusKey) {
+                            const s = String(row[statusKey]).toLowerCase();
+                            if (s.includes('review') || s.includes('screening') || s.includes('סינון') || s.includes('מיון')) status = 'screening';
+                            else if (s.includes('interview') || s.includes('ראיון')) status = 'interview';
+                            else if (s.includes('offer') || s.includes('הצעה')) status = 'offer';
+                            else if (s.includes('hired') || s.includes('גוייס') || s.includes('התקבל')) status = 'hired';
+                            else if (s.includes('reject') || s.includes('דחייה') || s.includes('לא מתאים')) status = 'rejected';
+                        }
+
+                        // Detect Notes
+                        let notes = '';
+                        const notesKey = keys.find(k => /note|comment|הערות|משוב/.test(k.toLowerCase()));
+                        if (notesKey) {
+                            notes = String(row[notesKey]).trim();
+                        }
+
                         return {
                             full_name: name || email.split('@')[0] || 'Unknown',
                             email: email || '',
@@ -127,7 +162,10 @@ export async function POST(req: NextRequest) {
                             summary: 'Bulk Import',
                             experience_years: 0,
                             source: 'Import',
-                            status: 'new'
+                            status: status as any,
+                            priority: priority as any,
+                            score: isNaN(score as any) ? undefined : score,
+                            notes: notes
                         };
                     }).filter(c => c.email || c.phone); // Keep only if has contact info
 
@@ -148,10 +186,14 @@ export async function POST(req: NextRequest) {
                     // Parse headers to find column indices  
                     const headers = firstLine.split(delimiter).map(h => h.trim().toLowerCase());
                     const emailCol = headers.findIndex(h => h.includes('email') || h.includes('mail') || h.includes('@'));
-                    const phoneCol = headers.findIndex(h => /phone|mobile|tel|טלפון/.test(h));
+                    const phoneCol = headers.findIndex(h => /phone|mobile|tel|טלפון|נייד/.test(h));
                     const nameCol = headers.findIndex(h => /name|שם|candidate/.test(h));
+                    const scoreCol = headers.findIndex(h => /score|rating|ציון|דירוג/.test(h));
+                    const priorityCol = headers.findIndex(h => /priority|עדיפות/.test(h));
+                    const statusCol = headers.findIndex(h => /status|state|סטטוס|מצב|שלב/.test(h));
+                    const notesCol = headers.findIndex(h => /note|comment|הערות|משוב/.test(h));
 
-                    console.log(`[PARSE-RESUME] Column mapping - Email: ${emailCol}, Phone: ${phoneCol}, Name: ${nameCol}`);
+                    console.log(`[PARSE-RESUME] Column mapping - Email: ${emailCol}, Phone: ${phoneCol}, Name: ${nameCol}, Score: ${scoreCol}`);
 
                     // Skip header row and parse data rows
                     const dataLines = lines.slice(1);
@@ -162,6 +204,25 @@ export async function POST(req: NextRequest) {
                         let email = emailCol >= 0 ? values[emailCol] : '';
                         let phone = phoneCol >= 0 ? values[phoneCol] : '';
                         let name = nameCol >= 0 ? values[nameCol] : '';
+                        let score = scoreCol >= 0 ? parseInt(values[scoreCol]) : undefined;
+                        let priority = 'medium';
+                        let status = 'new';
+                        let notes = notesCol >= 0 ? values[notesCol] : '';
+
+                        if (priorityCol >= 0) {
+                            const p = values[priorityCol].toLowerCase();
+                            if (p.includes('high')) priority = 'high';
+                            else if (p.includes('low')) priority = 'low';
+                        }
+
+                        if (statusCol >= 0) {
+                            const s = values[statusCol].toLowerCase();
+                            if (s.includes('review') || s.includes('screening')) status = 'screening';
+                            else if (s.includes('interview')) status = 'interview';
+                            else if (s.includes('offer')) status = 'offer';
+                            else if (s.includes('hired')) status = 'hired';
+                            else if (s.includes('reject')) status = 'rejected';
+                        }
 
                         // Fallback: Smart scan if columns not identified
                         if (!email || !phone || !name) {
@@ -208,7 +269,10 @@ export async function POST(req: NextRequest) {
                             summary: 'Bulk Import - TSV/CSV',
                             experience_years: 0,
                             source: 'Import',
-                            status: 'new'
+                            status: status as any,
+                            priority: priority as any,
+                            score: isNaN(score as any) ? undefined : score,
+                            notes: notes
                         };
                     }).filter(c => c.email || c.phone);
 

@@ -62,9 +62,12 @@ export async function POST(req: NextRequest) {
                         const values = Object.values(row);
                         const keys = Object.keys(row);
 
-                        // Detect Email (look for @ symbol)
+                        // --- HEBREW/YIDDISH FRIENDLY DETECTION ---
+                        // Detect Email (look for @ symbol or header variants in EN/HE/YI)
                         let email = '';
-                        const emailKey = keys.find(k => /email|mail|אימייל|דוא"ל/.test(k.toLowerCase()));
+                        const emailKey = keys.find(k =>
+                            /email|mail|e-mail|מייל|אימייל|דוא["']?ל/.test(k.toLowerCase())
+                        );
                         if (emailKey) {
                             email = String(row[emailKey]).trim();
                         } else {
@@ -75,7 +78,9 @@ export async function POST(req: NextRequest) {
 
                         // Detect Phone (look for numeric patterns)
                         let phone = '';
-                        const phoneKey = keys.find(k => /phone|mobile|tel|טלפון|פלאפון/.test(k.toLowerCase()));
+                        const phoneKey = keys.find(k =>
+                            /phone|mobile|tel|טלפון|פלאפון|נייד|סלולרי|טעלעפון/.test(k.toLowerCase())
+                        );
                         if (phoneKey) {
                             phone = String(row[phoneKey]).trim();
                         } else {
@@ -89,7 +94,9 @@ export async function POST(req: NextRequest) {
 
                         // Detect Name (prefer column near phone, skip long descriptions)
                         let name = '';
-                        const nameKey = keys.find(k => /name|candidate|שם|שם מלא/.test(k.toLowerCase()));
+                        const nameKey = keys.find(k =>
+                            /name|candidate|שם\s*מלא|שם המועמד|שם|שם פרטי|שם משפחה|נאמען/.test(k.toLowerCase())
+                        );
                         if (nameKey) {
                             name = String(row[nameKey]).trim();
                         } else {
@@ -100,6 +107,7 @@ export async function POST(req: NextRequest) {
                                     !v.includes('@') &&
                                     v.length > 2 &&
                                     v.length < 60 &&  // Names are typically shorter
+                                    !/[0-9]/.test(v) && // Exclude anything with digits (e.g. "100 לשעה")
                                     !/^[0-9\-\s\(\)\.+]{6,}$/.test(v) && // Not a phone
                                     !v.includes(',') && !v.includes('.') // Skip descriptions with punctuation
                                 );
@@ -183,11 +191,17 @@ export async function POST(req: NextRequest) {
                     const delimiter = firstLine.includes('\t') ? '\t' : ',';
                     console.log(`[PARSE-RESUME] Detected delimiter: ${delimiter === '\t' ? 'TAB' : 'COMMA'}, ${lines.length} lines`);
 
-                    // Parse headers to find column indices  
+                    // Parse headers to find column indices (EN/HE/YI friendly)
                     const headers = firstLine.split(delimiter).map(h => h.trim().toLowerCase());
-                    const emailCol = headers.findIndex(h => h.includes('email') || h.includes('mail') || h.includes('@'));
-                    const phoneCol = headers.findIndex(h => /phone|mobile|tel|טלפון|נייד/.test(h));
-                    const nameCol = headers.findIndex(h => /name|שם|candidate/.test(h));
+                    const emailCol = headers.findIndex(h =>
+                        /email|mail|e-mail|מייל|אימייל|דוא["']?ל/.test(h) || h.includes('@')
+                    );
+                    const phoneCol = headers.findIndex(h =>
+                        /phone|mobile|tel|טלפון|פלאפון|נייד|סלולרי|טעלעפון/.test(h)
+                    );
+                    const nameCol = headers.findIndex(h =>
+                        /name|candidate|שם\s*מלא|שם המועמד|שם|שם פרטי|שם משפחה|נאמען/.test(h)
+                    );
                     const scoreCol = headers.findIndex(h => /score|rating|ציון|דירוג/.test(h));
                     const priorityCol = headers.findIndex(h => /priority|עדיפות/.test(h));
                     const statusCol = headers.findIndex(h => /status|state|סטטוס|מצב|שלב/.test(h));
@@ -238,7 +252,15 @@ export async function POST(req: NextRequest) {
                                 } else if (!phone && /^[0-9\-\s\(\)\.+]{9,20}$/.test(val)) {
                                     phone = val;
                                     phoneIdx = idx;
-                                } else if (val.length > 2 && val.length < 60 && !val.includes('@') && !/^[0-9\-\s\(\)\.+]{6,}$/.test(val) && !val.includes(',') && !val.includes('.')) {
+                                } else if (
+                                    val.length > 2 &&
+                                    val.length < 60 &&
+                                    !val.includes('@') &&
+                                    !/[0-9]/.test(val) && // Exclude values with digits (rates like "100 לשעה")
+                                    !/^[0-9\-\s\(\)\.+]{6,}$/.test(val) &&
+                                    !val.includes(',') &&
+                                    !val.includes('.')
+                                ) {
                                     candidates.push({ val, idx });
                                 }
                             });
@@ -301,57 +323,161 @@ export async function POST(req: NextRequest) {
             if (process.env.OPENAI_API_KEY) {
                 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-                const systemPrompt = `You are an expert Resume Parser. 
-                The user will provide text from a PDF or Document.
-                This text may contain ONE candidate profile or MULTIPLE candidate profiles (e.g. a list).
-                
-                Your goal is to extract ALL candidates found in the text.
-                Return a JSON object with a single key "candidates" which is an ARRAY of candidate objects.
-                
-                Each candidate object should have:
-                - full_name (string, required)
-                - email (string)
-                - phone (string)
-                - skills (array of strings)
-                - summary (string, brief professional summary from the text)
-                - experience_years (string or number, estimate from text)
-                - education (string)
-                - previous_companies (string)
-                
-                If the text is a single resume, the array will contain just one object.
-                If the text is a list, the array will contain multiple objects.
-                Ensure valid JSON response.`;
+                const systemPrompt = `You are the world's most aggressive AI Resume Parser for the Rabbinic and Jewish Publishing industry. 
+
+### MISSION:
+Extract EVERY detail. You MUST populate the assessment objects below. If a skill is not explicitly mentioned but can be inferred (e.g., a "Rabbi" knows Gemara, a "Proofreader" knows Punctuation), YOU MUST ASSIGN A SCORE between 70-100. DO NOT USE "n/e" UNLESS ABSOLUTELY NO INFERENCE IS POSSIBLE.
+
+### CRITICAL: FLAT STRUCTURE
+All assessment objects must be FLAT. No sub-objects.
+
+**1. typing_skills**: { handwriting_yiddish, handwriting_hebrew, difficult_handwriting, recordings, corrections_no_errors, special_fonts, translation, yiddish_to_hebrew, hebrew_to_yiddish, extract_hebrew, english_to_yiddish, english_to_hebrew, other_languages }
+**2. writing_hebrew**: { chassidic_style, learning_style, halacha_style, mussar_style, stories_style, introduction, biography }
+**3. proofreading_hebrew**: { typing_errors, punctuation, final_proofing }
+**4. editing_hebrew**: { content_organization, references, general, titles, language_improvement, explanations, content_review }
+**5. writing_yiddish**: { chassidic_style, learning_style, halacha_style, mussar_style, stories_style, introduction, biography }
+**6. proofreading_yiddish**: { typing_errors, punctuation, final_proofing }
+**7. editing_yiddish**: { content_organization, references, general, titles, language_improvement, explanations, content_review }
+**8. other_work**: { source_index, subject_index, biographies, collection_from_books }
+**9. graphic_layout**: { page_layout, cover_design, illustrations }
+**10. subject_expertise**: { tanach, drush_agada, maharal, kabbalah, ramchal, mussar, jewish_history, chassidus, jewish_history_stories, tzaddik_stories, lineage, yahrtzeits, hashkafa, kanaos, gemara_general, berachos, shabbos, eruvin, pesachim, rosh_hashana, yoma, sukkah, beitzah, taanis, megillah, moed_katan, chagigah, yevamos, kesubos, nedarim, nazir, sotah, gittin, kiddushin, bava_kamma, bava_metzia, bava_basra, sanhedrin, makkos, shevuos, avodah_zarah, horayos, zevachim, menachos, chullin, bechoros, arachin, temurah, kerisos, meilah, niddah, shulchan_aruch_orach_chaim, shulchan_aruch_yoreh_deah, shulchan_aruch_even_haezer, shulchan_aruch_choshen_mishpat }
+**11. software_skills**: { word, excel, tag, indesign, otzar_hachochma, otzaros_hatorah, dbs, bar_ilan }
+
+### CORE INFORMATION:
+- full_name, email, phone, skills (array of strings), summary, experience_years, occupation, address, languages, community, other_details, institutions, books_edited, years_editing.
+
+### INFERENCE RULES:
+- If Candidate is a "Rabbi" or "Rosh Yeshiva": Give 95 to gemara_general, tanach, mussar.
+- If Candidate worked for a "Machon": Give 90+ to proofreading and editing keys.
+- If they mention "Otzar HaChochma": Give 100 to otzar_hachochma software skill.
+- ALWAYS return strings for scores (e.g., "85").
+
+Return a JSON object with a "candidates" array.`;
 
                 const completion = await openai.chat.completions.create({
                     messages: [
                         { role: "system", content: systemPrompt },
-                        { role: "user", content: text.substring(0, 15000) } // Limit text length to avoid token limits
+                        { role: "user", content: text.substring(0, 15000) }
                     ],
-                    model: "gpt-3.5-turbo-1106", // JSON mode support
+                    model: "gpt-4o",
                     response_format: { type: "json_object" },
                     temperature: 0
                 });
 
                 const content = completion.choices[0].message.content;
+                console.log("[AI-RAW-RESPONSE]", content);
                 if (content) {
                     try {
                         const parsed = JSON.parse(content);
-                        if (parsed.candidates && Array.isArray(parsed.candidates)) {
-                            // Normalize skills to objects
-                            candidatesData = parsed.candidates.map((c: any) => ({
-                                ...c,
+                        const items = parsed.candidates || (parsed.full_name ? [parsed] : []);
+
+                        candidatesData = items.map((c: any) => {
+                            // Helper to ensure field is a string (joins arrays)
+                            const toString = (val: any) => Array.isArray(val) ? val.join(', ') : String(val || '');
+
+                            // Start with ONLY standard fields (don't spread ...c)
+                            const flattened: any = {
+                                // Standard fields
+                                full_name: toString(c.full_name),
+                                email: toString(c.email).replace(/\s/g, ''),
+                                phone: toString(c.phone),
+                                occupation: toString(c.occupation),
+                                address: toString(c.address),
+                                languages: toString(c.languages),
+                                community: toString(c.community),
+                                other_details: toString(c.other_details),
+                                institutions: toString(c.institutions),
+                                books_edited: toString(c.books_edited),
+                                years_editing: toString(c.years_editing || c.experience_years),
+                                summary: toString(c.summary),
+                                source: "Upload",
+
+                                // Skills normalization
                                 skills: Array.isArray(c.skills)
                                     ? c.skills.map((s: string | any) => typeof s === 'string' ? { name: s, status: 'unverified' } : s)
                                     : []
-                            }));
-                        } else if (parsed.full_name) {
-                            // Fallback if model returns single object
-                            const c = parsed;
-                            c.skills = Array.isArray(c.skills)
-                                ? c.skills.map((s: string | any) => typeof s === 'string' ? { name: s, status: 'unverified' } : s)
-                                : [];
-                            candidatesData = [c];
-                        }
+                            };
+
+                            // Flatten typing_skills
+                            if (c.typing_skills) {
+                                Object.keys(c.typing_skills).forEach(key => {
+                                    flattened[`typing_${key}`] = c.typing_skills[key];
+                                });
+                            }
+
+                            // Flatten writing_hebrew
+                            if (c.writing_hebrew) {
+                                Object.keys(c.writing_hebrew).forEach(key => {
+                                    flattened[`writing_hebrew_${key}`] = c.writing_hebrew[key];
+                                });
+                            }
+
+                            // Flatten proofreading_hebrew
+                            if (c.proofreading_hebrew) {
+                                Object.keys(c.proofreading_hebrew).forEach(key => {
+                                    flattened[`proofreading_hebrew_${key}`] = c.proofreading_hebrew[key];
+                                });
+                            }
+
+                            // Flatten editing_hebrew
+                            if (c.editing_hebrew) {
+                                Object.keys(c.editing_hebrew).forEach(key => {
+                                    flattened[`editing_hebrew_${key}`] = c.editing_hebrew[key];
+                                });
+                            }
+
+                            // Flatten writing_yiddish
+                            if (c.writing_yiddish) {
+                                Object.keys(c.writing_yiddish).forEach(key => {
+                                    flattened[`writing_yiddish_${key}`] = c.writing_yiddish[key];
+                                });
+                            }
+
+                            // Flatten proofreading_yiddish
+                            if (c.proofreading_yiddish) {
+                                Object.keys(c.proofreading_yiddish).forEach(key => {
+                                    flattened[`proofreading_yiddish_${key}`] = c.proofreading_yiddish[key];
+                                });
+                            }
+
+                            // Flatten editing_yiddish
+                            if (c.editing_yiddish) {
+                                Object.keys(c.editing_yiddish).forEach(key => {
+                                    flattened[`editing_yiddish_${key}`] = c.editing_yiddish[key];
+                                });
+                            }
+
+                            // Flatten other_work
+                            if (c.other_work) {
+                                Object.keys(c.other_work).forEach(key => {
+                                    flattened[`other_work_${key}`] = c.other_work[key];
+                                });
+                            }
+
+                            // Flatten graphic_layout
+                            if (c.graphic_layout) {
+                                Object.keys(c.graphic_layout).forEach(key => {
+                                    flattened[`graphic_layout_${key}`] = c.graphic_layout[key];
+                                });
+                            }
+
+                            // Flatten subject_expertise
+                            if (c.subject_expertise) {
+                                Object.keys(c.subject_expertise).forEach(key => {
+                                    flattened[`subject_${key}`] = c.subject_expertise[key];
+                                });
+                            }
+
+                            // Flatten software_skills
+                            if (c.software_skills) {
+                                Object.keys(c.software_skills).forEach(key => {
+                                    flattened[`software_${key}`] = c.software_skills[key];
+                                });
+                            }
+
+                            console.log(`[PARSED-CANDIDATE] Name: ${flattened.full_name}, Flattened fields count:`, Object.keys(flattened).length);
+                            return flattened;
+                        });
                     } catch (e) {
                         console.error("AI Parse Error", e);
                     }

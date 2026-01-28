@@ -153,41 +153,41 @@ export default function CandidateCard({ candidate, onUpdate }: CandidateCardProp
                             </div>
                         </div>
 
-                    {/* Skills & Matched Jobs */}
-                    <div className="mt-3 sm:mt-4 space-y-2">
-                        {candidate.skills?.length > 0 && (
-                            <div className="flex flex-wrap gap-1 sm:gap-1.5">
-                                {candidate.skills.slice(0, expanded ? undefined : 5).map((skill: any, i: number) => {
-                                    const skillName = typeof skill === 'string' ? skill : skill.name;
-                                    const status = typeof skill === 'string' ? 'unverified' : skill.status;
-                                    const statusColor = status === 'verified' ? 'bg-blue-100 text-blue-700 border-blue-200' :
-                                        status === 'certified' ? 'bg-green-100 text-green-700 border-green-200' :
-                                            'bg-slate-100 text-slate-600';
-                                    return (
-                                        <Badge key={i} variant="secondary" className={`${statusColor} font-normal border text-xs sm:text-sm px-1.5 sm:px-2 py-0.5`}>
-                                            {status === 'verified' && <CheckCircle2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1" />}
-                                            {status === 'certified' && <Award className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1" />}
-                                            {skillName}
+                        {/* Skills & Matched Jobs */}
+                        <div className="mt-3 sm:mt-4 space-y-2">
+                            {candidate.skills?.length > 0 && (
+                                <div className="flex flex-wrap gap-1 sm:gap-1.5">
+                                    {candidate.skills.slice(0, expanded ? undefined : 5).map((skill: any, i: number) => {
+                                        const skillName = typeof skill === 'string' ? skill : skill.name;
+                                        const status = typeof skill === 'string' ? 'unverified' : skill.status;
+                                        const statusColor = status === 'verified' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                                            status === 'certified' ? 'bg-green-100 text-green-700 border-green-200' :
+                                                'bg-slate-100 text-slate-600';
+                                        return (
+                                            <Badge key={i} variant="secondary" className={`${statusColor} font-normal border text-xs sm:text-sm px-1.5 sm:px-2 py-0.5`}>
+                                                {status === 'verified' && <CheckCircle2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1" />}
+                                                {status === 'certified' && <Award className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1" />}
+                                                {skillName}
+                                            </Badge>
+                                        );
+                                    })}
+                                    {!expanded && candidate.skills.length > 5 && (
+                                        <Badge variant="secondary" className="bg-slate-100 text-slate-500 text-xs sm:text-sm px-1.5 sm:px-2 py-0.5">
+                                            +{candidate.skills.length - 5} more
                                         </Badge>
-                                    );
-                                })}
-                                {!expanded && candidate.skills.length > 5 && (
-                                    <Badge variant="secondary" className="bg-slate-100 text-slate-500 text-xs sm:text-sm px-1.5 sm:px-2 py-0.5">
-                                        +{candidate.skills.length - 5} more
-                                    </Badge>
-                                )}
-                            </div>
-                        )}
-                        {candidate.matched_jobs?.length > 0 && (
-                            <div className="flex flex-wrap gap-1 sm:gap-1.5">
-                                {candidate.matched_jobs.map((job: string, i: number) => (
-                                    <Badge key={i} className="bg-blue-50 text-blue-700 border border-blue-200 text-xs sm:text-sm px-1.5 sm:px-2 py-0.5">
-                                        <Briefcase className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1" />
-                                        {job}
-                                    </Badge>
-                                ))}
-                            </div>
-                        )}
+                                    )}
+                                </div>
+                            )}
+                            {candidate.matched_jobs?.length > 0 && (
+                                <div className="flex flex-wrap gap-1 sm:gap-1.5">
+                                    {candidate.matched_jobs.map((job: string, i: number) => (
+                                        <Badge key={i} className="bg-blue-50 text-blue-700 border border-blue-200 text-xs sm:text-sm px-1.5 sm:px-2 py-0.5">
+                                            <Briefcase className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1" />
+                                            {job}
+                                        </Badge>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -357,7 +357,11 @@ export default function CandidateCard({ candidate, onUpdate }: CandidateCardProp
 
                                     {showAssessment && (
                                         <div className="mt-6 pt-6 border-t border-slate-200">
-                                            <AssessmentForm candidate={candidate} onUpdate={onUpdate} />
+                                            <AssessmentForm
+                                                key={candidate._id || candidate.id}
+                                                candidate={candidate}
+                                                onUpdate={onUpdate}
+                                            />
                                         </div>
                                     )}
                                 </div>

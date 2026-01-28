@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
         // BATCH INSERT: Handle arrays for bulk creation
         if (Array.isArray(body)) {
             console.log(`[CANDIDATES API] Received batch insert request for ${body.length} candidates`);
+
             const candidates = await Candidate.insertMany(
                 body.map(item => ({
                     ...item,
@@ -51,8 +52,14 @@ export async function POST(req: NextRequest) {
                     user_id: userId
                 }))
             );
+
             console.log(`[CANDIDATES API] Successfully inserted ${candidates.length} candidates`);
-            return NextResponse.json({ success: true, count: candidates.length, candidates }, { status: 201 });
+
+            return NextResponse.json({
+                success: true,
+                count: candidates.length,
+                candidates
+            }, { status: 201 });
         }
 
         // SINGLE INSERT: Handle single object
